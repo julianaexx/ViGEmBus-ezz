@@ -29,6 +29,14 @@ jobs:
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Read Windows compatibility target
+        shell: pwsh
+        run: |
+          $compatibility = Get-Content setup/compatibility.json -Raw | ConvertFrom-Json
+          "VIGEM_KMDF_MAJOR=$($compatibility.kmdfVersion.Split('.')[0])" | Out-File $env:GITHUB_ENV -Append
+          "VIGEM_KMDF_MINOR=$($compatibility.kmdfVersion.Split('.')[1])" | Out-File $env:GITHUB_ENV -Append
+          "VIGEM_MIN_WINDOWS_VERSION=$($compatibility.minimumWindowsVersion)" | Out-File $env:GITHUB_ENV -Append
+
       - name: Fetch DMF
         shell: pwsh
         run: |
@@ -45,7 +53,9 @@ jobs:
             /p:Platform=x64 `
             /p:LatestTargetPlatformVersion=10.0.26100.0 `
             /p:WindowsTargetPlatformVersion=10.0.26100.0 `
-            /p:KmdfVersion=1.33 `
+            /p:KMDF_VERSION_MAJOR=$env:VIGEM_KMDF_MAJOR `
+            /p:KMDF_VERSION_MINOR=$env:VIGEM_KMDF_MINOR `
+            /p:WindowsTargetPlatformMinVersion=$env:VIGEM_MIN_WINDOWS_VERSION `
             /p:SignMode=Off `
             /v:minimal
 
@@ -61,7 +71,9 @@ jobs:
             /p:SolutionDir="$env:GITHUB_WORKSPACE\" `
             /p:WindowsTargetPlatformVersion=10.0.26100.0 `
             /p:SkipInfVerification=true `
-            /p:KmdfVersion=1.33 `
+            /p:KMDF_VERSION_MAJOR=$env:VIGEM_KMDF_MAJOR `
+            /p:KMDF_VERSION_MINOR=$env:VIGEM_KMDF_MINOR `
+            /p:WindowsTargetPlatformMinVersion=$env:VIGEM_MIN_WINDOWS_VERSION `
             /p:SignMode=Off `
             /v:minimal
 
@@ -110,6 +122,6 @@ jobs:
         with:
           name: ViGEmBus-x64-series-test-signed
           path: |
-            artifacts/ViGEmBus_Setup_1.0.2_x64_TEST_SIGNED.exe
+            artifacts/ViGEmBus_Setup_*_x64_TEST_SIGNED.exe
             artifacts/setup-payload/
           if-no-files-found: error

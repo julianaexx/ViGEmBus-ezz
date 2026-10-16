@@ -1,0 +1,6 @@
+{
+  "minimumWindowsVersion": "10.0.19041",
+  "kmdfVersion": "1.31",
+  "setupVersion": "1.0.3",
+  "driverVersion": "1.22.2.0"
+}

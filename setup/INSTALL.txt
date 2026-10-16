@@ -1,7 +1,8 @@
 ViGEmBus-ezz - Xbox Series identity - x64 TEST BUILD
 
 This is a modified community driver, not an official Nefarius signed release.
-Supports Windows 11 x64. It uses KMDF 1.33 from Windows 11.
+Supports Windows 10 2004 (build 19041) and later, including Windows 10 22H2
+and Windows 11, x64. The driver and DMF are compiled against KMDF 1.31.
 
 The EXE contains the driver SYS, stamped INF, signed CAT, test certificate,
 device installation tool, installation wizard, uninstaller, and licenses.

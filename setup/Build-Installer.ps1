@@ -1,5 +1,8 @@
-param([string]$Version = '1.0.2', [string]$DriverVersion = '1.22.1.0')
+param()
 $ErrorActionPreference = 'Stop'
+$compatibility = Get-Content "$PSScriptRoot/compatibility.json" -Raw | ConvertFrom-Json
+$Version = $compatibility.setupVersion
+$DriverVersion = $compatibility.driverVersion
 $root = Split-Path $PSScriptRoot -Parent
 $stage = Join-Path $root 'artifacts/setup-payload'
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
@@ -23,6 +26,7 @@ function Invoke-Checked([string]$Tool, [string[]]$Arguments) {
 }
 Copy-Item (Find-KitTool 'devcon.exe' 'x64') "$stage/devcon.exe"
 Copy-Item "$root/drivers/devcon-LICENSE" $stage
+Invoke-Checked (Get-Command python.exe).Source @("$PSScriptRoot/validate_driver_compatibility.py", "$stage/ViGEmBus.sys", $compatibility.kmdfVersion)
 
 # Windows 10/11 contain KMDF in-box; no legacy co-installer is required.
 $inf = Get-Content "$root/sys/ViGEmBus.inf" -Raw
@@ -32,7 +36,7 @@ $inf = $inf -replace '(?ms)^\[ViGEmBus_Device\.NT\.CoInstallers\].*?(?=^\[ViGEmB
 $inf = $inf -replace '(?m)^%ManufacturerName%=Standard,.*$', '%ManufacturerName%=Standard,NTamd64'
 $inf = $inf -replace '(?ms)^\[Standard\.NTx86\].*?(?=^\[ViGEmBus_Device\.NT\])', ''
 $inf | Set-Content "$stage/ViGEmBus.inf" -Encoding ascii
-Invoke-Checked (Find-KitTool 'stampinf.exe' 'x64') @('-f', "$stage/ViGEmBus.inf", '-a', 'amd64', '-d', (Get-Date -Format 'MM/dd/yyyy'), '-v', $DriverVersion, '-k', '1.33')
+Invoke-Checked (Find-KitTool 'stampinf.exe' 'x64') @('-f', "$stage/ViGEmBus.inf", '-a', 'amd64', '-d', (Get-Date -Format 'MM/dd/yyyy'), '-v', $DriverVersion, '-k', $compatibility.kmdfVersion)
 if ((Get-Content "$stage/ViGEmBus.inf" -Raw) -match '\$KMDF|\$ARCH|DriverVer=\s*;') {
     throw 'Unresolved INF build placeholders.'
 }
@@ -63,7 +67,8 @@ try {
 $compiler = Get-Command ISCC.exe -ErrorAction SilentlyContinue
 $iscc = if ($compiler) { $compiler.Source } else { "${env:ProgramFiles(x86)}/Inno Setup 6/ISCC.exe" }
 if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler not found.' }
-Invoke-Checked $iscc @("/DAppVersion=$Version", "/DPayloadDir=$stage", "/DOutputDir=$root/artifacts", "$PSScriptRoot/ViGEmBus.iss")
+Invoke-Checked $iscc @("/DAppVersion=$Version", "/DMinWindowsVersion=$($compatibility.minimumWindowsVersion)", "/DPayloadDir=$stage", "/DOutputDir=$root/artifacts", "$PSScriptRoot/ViGEmBus.iss")
 $exe = Join-Path $root "artifacts/ViGEmBus_Setup_${Version}_x64_TEST_SIGNED.exe"
 if (-not (Test-Path $exe)) { throw 'Setup EXE was not created.' }
+& "$PSScriptRoot/Test-InstallerStartup.ps1" -Path $exe
 Get-FileHash $exe -Algorithm SHA256 | Format-List

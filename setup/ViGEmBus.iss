@@ -1,5 +1,8 @@
 ﻿#ifndef AppVersion
-  #define AppVersion "1.0.2"
+  #define AppVersion "1.0.3"
+#endif
+#ifndef MinWindowsVersion
+  #define MinWindowsVersion "10.0.19041"
 #endif
 
 [Setup]
@@ -11,8 +14,9 @@ AppPublisherURL=https://github.com/julianaexx/ViGEmBus-ezz
 DefaultDirName={autopf}\ViGEmBus-ezz
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
-MinVersion=10.0.22000
+MinVersion={#MinWindowsVersion}
 PrivilegesRequired=admin
+PrivilegesRequiredOverridesAllowed=commandline
 DefaultGroupName=ViGEmBus-ezz
 DisableProgramGroupPage=yes
 DisableDirPage=yes
@@ -46,6 +50,19 @@ var
 function ResultFile(): String;
 begin
   Result := ExpandConstant('{tmp}\driver-result.txt');
+end;
+
+function InitializeSetup(): Boolean;
+var
+  ProbeReport: String;
+begin
+  Result := True;
+  if ExpandConstant('{param:COMPATIBILITYCHECK|0}') = '1' then begin
+    ProbeReport := ExpandConstant('{param:COMPATIBILITYREPORT|}');
+    if ProbeReport <> '' then
+      SaveStringToFile(ProbeReport, 'PASS: installer startup on Windows ' + GetWindowsVersionString() + '; minimum Windows {#MinWindowsVersion}; no driver or certificate was installed.', False);
+    Result := False;
+  end;
 end;
 
 function RunDriver(Mode: String; Script: String; var ResultCode: Integer): Boolean;

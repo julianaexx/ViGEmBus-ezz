@@ -49,11 +49,11 @@ jobs:
             /p:DmfRootPath="$env:DMF_ROOT_PATH" `
             /p:SolutionDir="$env:GITHUB_WORKSPACE\" `
             /p:WindowsTargetPlatformVersion=10.0.26100.0 `
-            /p:InfVerifEnable=false `
-            /p:EnableInfVerif=false `
-            /p:DisableSpecificWarnings=4005 `
+            /p:SkipInfVerification=true `
             /p:SignMode=Off `
             /v:minimal
+
+          Copy-Item "$env:GITHUB_WORKSPACE\sys\ViGEmBus.inf" "$env:GITHUB_WORKSPACE\bin\x64\ViGEmBus\ViGEmBus.inf"
 
       - name: Package driver
         shell: pwsh

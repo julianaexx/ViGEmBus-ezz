@@ -19,13 +19,12 @@ jobs:
       - name: Set up MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Fetch and patch DMF
+      - name: Fetch DMF
         shell: pwsh
         run: |
           $dmfRoot = Join-Path $env:RUNNER_TEMP 'DMF'
           "DMF_ROOT_PATH=$dmfRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           git clone --depth 1 https://github.com/microsoft/DMF.git "$dmfRoot"
-          git -C "$dmfRoot" apply "$env:GITHUB_WORKSPACE\patches\dmf.diff"
 
       - name: Build DMF
         shell: pwsh
@@ -34,6 +33,7 @@ jobs:
             /m `
             /p:Configuration=Release `
             /p:Platform=x64 `
+            /p:WindowsTargetPlatformVersion=10.0.19041.0 `
             /p:SignMode=Off `
             /v:minimal
 

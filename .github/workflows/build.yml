@@ -66,7 +66,7 @@ jobs:
           New-Item -ItemType Directory -Path $stage -Force | Out-Null
           Copy-Item "$env:GITHUB_WORKSPACE\bin\x64\ViGEmBus\ViGEmBus.sys" $stage
           Copy-Item "$env:GITHUB_WORKSPACE\bin\x64\ViGEmBus\ViGEmBus.inf" $stage
-          $devcon = Get-ChildItem "$env:ProgramFiles(x86)\Windows Kits\10\Tools" -Filter devcon.exe -Recurse | Where-Object { $_.FullName -match '\\x64\\devcon\.exe$' } | Select-Object -First 1
+          $devcon = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Tools" -Filter devcon.exe -Recurse | Where-Object { $_.FullName -match '\\x64\\devcon\.exe$' } | Select-Object -First 1
           if (-not $devcon) { throw 'x64 devcon.exe was not found in the installed WDK.' }
           Copy-Item $devcon.FullName (Join-Path $stage 'devcon.exe')
 

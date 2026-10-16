@@ -21,7 +21,7 @@ The `ViGEmBus` driver and `ViGEmClient` libraries represent the core of the Virt
 Emulation of the following USB Gamepads is supported:
 
 - [Microsoft Xbox Series X|S Controller](https://en.wikipedia.org/wiki/Xbox_Series_X_and_Series_S#Controller)
-- Legacy XUSB clients that request the Xbox 360 identity are exposed as the Xbox Series X|S identity for correct host-side button icons.
+- Legacy XUSB clients that request the Xbox 360 identity are exposed with the Xbox Series X|S VID/PID. This experimental identity change does not implement the physical Series controller's USB/GIP protocol or guarantee different button icons in every game.
 - [Sony DualShock 4 Controller](https://en.wikipedia.org/wiki/DualShock#DualShock_4)
 
 ## Use cases
@@ -80,7 +80,9 @@ Please respect that the GitHub issue tracker isn't a helpdesk. We offer a [range
 
 ## Installation
 
-Pre-built production-signed binaries **for Windows 10/11** are provided by `Nefarius Software Solutions e.U.` [as an all-in-one setup](../../releases/latest).
+The upstream project's official releases contain production-signed drivers. Modified drivers built by this fork cannot reuse those signatures.
+
+This fork's GitHub Actions workflow builds an **x64 test-signed installer for Windows 11**, with an installation wizard, stamped INF, signed SYS/CAT, test certificate, device installer and uninstaller. Windows test-signing mode is required before installation; setup does not change boot security settings. See [installation details](setup/INSTALL.txt). The installer uses Inno Setup and excludes the upstream package's x86/ARM64 binaries and updater, so its file size differs from the official all-in-one EXE. CI checks compilation, catalog integrity and test signatures; runtime installation and game behavior still require testing on a suitable Windows machine.
 
 ## Sponsors
 

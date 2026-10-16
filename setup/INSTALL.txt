@@ -1,0 +1,45 @@
+ViGEmBus-ezz - Xbox Series identity - x64 TEST BUILD
+
+This is a modified community driver, not an official Nefarius signed release.
+Supports Windows 11 x64. It uses KMDF 1.33 from Windows 11.
+
+The EXE contains the driver SYS, stamped INF, signed CAT, test certificate,
+device installation tool, installation wizard, uninstaller, and licenses.
+It does not include the official installer's x86/ARM64 drivers or updater.
+This installer is built with Inno Setup, not the commercial Advanced Installer
+project used by the original release. Its file size will therefore differ.
+
+IMPORTANT: The modified driver has a self-signed TEST certificate. It does not
+have Microsoft's production driver signature. An installer cannot inherit the
+original driver's signature after modifying its binary.
+
+Before installing:
+1. Close Sunshine and other applications using ViGEmBus.
+2. Windows test-signing mode must already be enabled, followed by a restart.
+   From an administrator command prompt: bcdedit /set testsigning on
+   Secure Boot can prevent this command. Setup will NOT change Secure Boot,
+   boot settings, or Windows security settings automatically.
+   Documentation:
+   https://learn.microsoft.com/windows-hardware/drivers/install/the-testsigning-boot-configuration-option
+3. Run this setup EXE and approve elevation. It checks test-signing mode,
+   imports this build's test certificate, installs the catalog-backed driver,
+   and updates an existing ViGEmBus device or creates one if absent.
+4. Restart if prompted. Errors are recorded in:
+   %TEMP%\ViGEmBus-ezz-setup.log
+   C:\Windows\INF\setupapi.dev.log
+
+Uninstall through Windows Settings > Apps > Installed apps > ViGEmBus-ezz.
+Uninstallation removes this package's driver and test certificate.
+The official ViGEmBus MSI installation is a separate entry and is not removed.
+If you stop using test drivers, you can restore normal boot policy with:
+   bcdedit /set testsigning off
+Then restart Windows. Do not disable test mode while relying on this driver.
+
+The Series VID/PID changes are experimental. Game icons depend on the game's
+own controller detection; changing the device identity does not guarantee
+Series icons in every game. Physical Series controller USB/GIP protocol is
+not implemented by these identity changes.
+
+Validation performed by CI: driver compilation, INF/catalog generation,
+SYS/CAT test signatures and catalog membership, and installer compilation.
+A successful CI run does not verify runtime installation or game behavior.

@@ -35,6 +35,7 @@ jobs:
             /p:Platform=x64 `
             /p:LatestTargetPlatformVersion=10.0.26100.0 `
             /p:WindowsTargetPlatformVersion=10.0.26100.0 `
+            /p:KmdfVersion=1.33 `
             /p:SignMode=Off `
             /v:minimal
 
@@ -50,96 +51,27 @@ jobs:
             /p:SolutionDir="$env:GITHUB_WORKSPACE\" `
             /p:WindowsTargetPlatformVersion=10.0.26100.0 `
             /p:SkipInfVerification=true `
+            /p:KmdfVersion=1.33 `
             /p:SignMode=Off `
             /v:minimal
 
-          Copy-Item "$env:GITHUB_WORKSPACE\sys\ViGEmBus.inf" "$env:GITHUB_WORKSPACE\bin\x64\ViGEmBus\ViGEmBus.inf"
-
-      - name: Package driver
-        shell: pwsh
-        run: makecab.exe /f "$env:GITHUB_WORKSPACE\ViGEmBus_x64.ddf"
-
-      - name: Build installable x64 setup EXE
+      - name: Install Inno Setup compiler
         shell: pwsh
         run: |
-          $stage = Join-Path $env:RUNNER_TEMP 'ViGEmBusSetup'
-          New-Item -ItemType Directory -Path $stage -Force | Out-Null
-          Copy-Item "$env:GITHUB_WORKSPACE\bin\x64\ViGEmBus\ViGEmBus.sys" $stage
-          Copy-Item "$env:GITHUB_WORKSPACE\bin\x64\ViGEmBus\ViGEmBus.inf" $stage
-          $devcon = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Tools" -Filter devcon.exe -Recurse | Where-Object { $_.FullName -match '\\x64\\devcon\.exe$' } | Select-Object -First 1
-          if (-not $devcon) { throw 'x64 devcon.exe was not found in the installed WDK.' }
-          Copy-Item $devcon.FullName (Join-Path $stage 'devcon.exe')
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation failed.' }
+          }
 
-          @'
-          @echo off
-          setlocal
-          fltmc >nul 2>&1
-          if errorlevel 1 (
-            powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -FilePath '%~f0' -Verb RunAs"
-            exit /b 0
-          )
-          cd /d "%~dp0"
-          pnputil.exe /add-driver "%~dp0ViGEmBus.inf" /install
-          if errorlevel 1 exit /b %errorlevel%
-          "%~dp0devcon.exe" install "%~dp0ViGEmBus.inf" Nefarius\ViGEmBus\Gen1
-          exit /b %errorlevel%
-          '@ | Set-Content (Join-Path $stage 'install.cmd') -Encoding ascii
+      - name: Build and validate complete test-signed setup
+        shell: pwsh
+        run: ./setup/Build-Installer.ps1
 
-          $sed = Join-Path $env:RUNNER_TEMP 'ViGEmBusSetup.sed'
-          @"
-          [Version]
-          Class=IEXPRESS
-          SEDVersion=3
-          [Options]
-          PackagePurpose=InstallApp
-          ShowInstallProgramWindow=1
-          HideExtractAnimation=1
-          UseLongFileName=1
-          InsideCompressed=1
-          CAB_FixedSize=0
-          CAB_ResvCodeSigning=0
-          RebootMode=N
-          InstallPrompt=%InstallPrompt%
-          DisplayLicense=%DisplayLicense%
-          FinishMessage=%FinishMessage%
-          TargetName=ViGEmBus_Setup_1.0.0_x64.exe
-          FriendlyName=%FriendlyName%
-          AppLaunched=install.cmd
-          PostInstallCmd=%PostInstallCmd%
-          AdminQuietInstCmd=install.cmd
-          UserQuietInstCmd=install.cmd
-          SourceFiles=SourceFiles
-          [Strings]
-          InstallPrompt=
-          DisplayLicense=
-          FinishMessage=
-          FriendlyName=ViGEmBus Xbox Series X|S Driver Setup
-          PostInstallCmd=<None>
-          FILE0=ViGEmBus.sys
-          FILE1=ViGEmBus.inf
-          FILE2=devcon.exe
-          FILE3=install.cmd
-          [SourceFiles]
-          SourceFiles0=$stage
-          [SourceFiles0]
-          %FILE0%=ViGEmBus.sys
-          %FILE1%=ViGEmBus.inf
-          %FILE2%=devcon.exe
-          %FILE3%=install.cmd
-          "@ | Set-Content $sed -Encoding ascii
-          Push-Location $env:GITHUB_WORKSPACE
-          Start-Process -FilePath 'iexpress.exe' -ArgumentList @('/N', '/Q', $sed) -Wait -NoNewWindow
-          Pop-Location
-          for ($i = 0; $i -lt 60 -and -not (Test-Path "$env:GITHUB_WORKSPACE\ViGEmBus_Setup_1.0.0_x64.exe"); $i++) { Start-Sleep -Seconds 1 }
-          if (-not (Test-Path "$env:GITHUB_WORKSPACE\ViGEmBus_Setup_1.0.0_x64.exe")) { throw 'Setup EXE was not created.' }
-
-      - name: Upload driver artifact
+      - name: Upload installer and driver package
         uses: actions/upload-artifact@v4
         with:
-          name: ViGEmBus-x64-series-controller
+          name: ViGEmBus-x64-series-test-signed
           path: |
-            bin/x64/ViGEmBus/ViGEmBus.sys
-            bin/x64/ViGEmBus/ViGEmBus.inf
-            ViGEmBus_x64.cab
-            ViGEmBus_Setup_1.0.0_x64.exe
+            artifacts/ViGEmBus_Setup_1.0.2_x64_TEST_SIGNED.exe
+            artifacts/setup-payload/
           if-no-files-found: error

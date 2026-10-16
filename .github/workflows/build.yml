@@ -124,6 +124,7 @@ jobs:
           %FILE3%=install.cmd
           "@ | Set-Content $sed -Encoding ascii
           iexpress.exe /N /Q $sed
+          for ($i = 0; $i -lt 60 -and -not (Test-Path "$env:GITHUB_WORKSPACE\ViGEmBus_Setup_1.0.0_x64.exe"); $i++) { Start-Sleep -Seconds 1 }
           if (-not (Test-Path "$env:GITHUB_WORKSPACE\ViGEmBus_Setup_1.0.0_x64.exe")) { throw 'Setup EXE was not created.' }
 
       - name: Upload driver artifact

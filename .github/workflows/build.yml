@@ -102,7 +102,7 @@ jobs:
           InstallPrompt=%InstallPrompt%
           DisplayLicense=%DisplayLicense%
           FinishMessage=%FinishMessage%
-          TargetName=$env:GITHUB_WORKSPACE\ViGEmBus_Setup_1.0.0_x64.exe
+          TargetName=ViGEmBus_Setup_1.0.0_x64.exe
           FriendlyName=%FriendlyName%
           AppLaunched=install.cmd
           PostInstallCmd=%PostInstallCmd%
@@ -123,7 +123,9 @@ jobs:
           %FILE2%=devcon.exe
           %FILE3%=install.cmd
           "@ | Set-Content $sed -Encoding ascii
-          iexpress.exe /N /Q $sed
+          Push-Location $env:GITHUB_WORKSPACE
+          Start-Process -FilePath 'iexpress.exe' -ArgumentList @('/N', '/Q', $sed) -Wait -NoNewWindow
+          Pop-Location
           for ($i = 0; $i -lt 60 -and -not (Test-Path "$env:GITHUB_WORKSPACE\ViGEmBus_Setup_1.0.0_x64.exe"); $i++) { Start-Sleep -Seconds 1 }
           if (-not (Test-Path "$env:GITHUB_WORKSPACE\ViGEmBus_Setup_1.0.0_x64.exe")) { throw 'Setup EXE was not created.' }
 

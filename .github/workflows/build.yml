@@ -9,8 +9,6 @@ on:
 jobs:
   build-x64:
     runs-on: windows-2019
-    env:
-      DMF_ROOT_PATH: ${{ runner.temp }}\DMF
 
     steps:
       - name: Check out source and SDK
@@ -24,8 +22,10 @@ jobs:
       - name: Fetch and patch DMF
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/microsoft/DMF.git "$env:DMF_ROOT_PATH"
-          git -C "$env:DMF_ROOT_PATH" apply "$env:GITHUB_WORKSPACE\patches\dmf.diff"
+          $dmfRoot = Join-Path $env:RUNNER_TEMP 'DMF'
+          "DMF_ROOT_PATH=$dmfRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          git clone --depth 1 https://github.com/microsoft/DMF.git "$dmfRoot"
+          git -C "$dmfRoot" apply "$env:GITHUB_WORKSPACE\patches\dmf.diff"
 
       - name: Build DMF
         shell: pwsh

@@ -115,6 +115,10 @@ jobs:
           FinishMessage=
           FriendlyName=ViGEmBus Xbox Series X|S Driver Setup
           PostInstallCmd=<None>
+          FILE0=ViGEmBus.sys
+          FILE1=ViGEmBus.inf
+          FILE2=devcon.exe
+          FILE3=install.cmd
           [SourceFiles]
           SourceFiles0=$stage
           [SourceFiles0]

@@ -50,6 +50,7 @@ end;
 
 function RunDriver(Mode: String; Script: String; var ResultCode: Integer): Boolean;
 begin
+  DeleteFile(ResultFile());
   Result := Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
     '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + Script + '" -Mode ' + Mode + ' -ResultPath "' + ResultFile() + '"',
     '', SW_HIDE, ewWaitUntilTerminated, ResultCode);

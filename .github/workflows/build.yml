@@ -55,6 +55,26 @@ jobs:
             /p:SignMode=Off `
             /v:minimal
 
+      - name: Save compiled driver
+        uses: actions/upload-artifact@v4
+        with:
+          name: ViGEmBus-x64-compiled-driver
+          path: bin/x64/ViGEmBus/ViGEmBus.sys
+          if-no-files-found: error
+
+  package-x64:
+    needs: build-x64
+    runs-on: windows-2022
+    steps:
+      - name: Check out installer source
+        uses: actions/checkout@v4
+
+      - name: Download compiled driver
+        uses: actions/download-artifact@v4
+        with:
+          name: ViGEmBus-x64-compiled-driver
+          path: bin/x64/ViGEmBus
+
       - name: Install Inno Setup compiler
         shell: pwsh
         run: |
@@ -64,6 +84,7 @@ jobs:
           }
 
       - name: Build and validate complete test-signed setup
+        timeout-minutes: 5
         shell: pwsh
         run: ./setup/Build-Installer.ps1
 

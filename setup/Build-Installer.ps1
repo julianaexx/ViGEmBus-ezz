@@ -10,13 +10,13 @@ Copy-Item "$PSScriptRoot/INSTALL.txt" $stage
 
 $kits = "${env:ProgramFiles(x86)}/Windows Kits/10"
 function Find-KitTool([string]$Name, [string]$Architecture) {
-    $tool = Get-ChildItem $kits -Filter $Name -Recurse |
-        Where-Object { $_.Directory.Name -eq $Architecture } |
+    $tool = Get-Item @("$kits/bin/*/$Architecture/$Name", "$kits/Tools/*/$Architecture/$Name", "$kits/bin/$Architecture/$Name", "$kits/Tools/$Architecture/$Name") -ErrorAction SilentlyContinue |
         Sort-Object FullName -Descending | Select-Object -First 1
     if (-not $tool) { throw "WDK tool not found: $Architecture/$Name" }
     $tool.FullName
 }
 function Invoke-Checked([string]$Tool, [string[]]$Arguments) {
+    Write-Host "Running $([IO.Path]::GetFileName($Tool))"
     & $Tool @Arguments
     if ($LASTEXITCODE -ne 0) { throw "$Tool failed with exit code $LASTEXITCODE" }
 }
@@ -47,14 +47,16 @@ try {
     Invoke-Checked $signTool @('sign', '/fd', 'SHA256', '/f', $pfx, '/p', $password, "$stage/ViGEmBus.sys")
     Invoke-Checked (Find-KitTool 'Inf2Cat.exe' 'x86') @("/driver:$stage", '/os:10_X64', '/uselocaltime')
     Invoke-Checked $signTool @('sign', '/fd', 'SHA256', '/f', $pfx, '/p', $password, "$stage/ViGEmBus.cat")
-    Import-Certificate -FilePath "$stage/ViGEmBus-Test.cer" -CertStoreLocation Cert:/CurrentUser/Root | Out-Null
+    # CurrentUser/Root import can display a protected-root confirmation dialog.
+    # The disposable elevated CI runner can use the machine store without UI.
+    Invoke-Checked "$env:windir/System32/certutil.exe" @('-f', '-addstore', 'Root', "$stage/ViGEmBus-Test.cer")
     Invoke-Checked $signTool @('verify', '/pa', '/v', "$stage/ViGEmBus.sys")
     Invoke-Checked $signTool @('verify', '/pa', '/v', '/c', "$stage/ViGEmBus.cat", "$stage/ViGEmBus.sys")
     Invoke-Checked $signTool @('verify', '/pa', '/v', '/c', "$stage/ViGEmBus.cat", "$stage/ViGEmBus.inf")
 } finally {
     Remove-Item $pfx -ErrorAction SilentlyContinue
     Remove-Item "Cert:/CurrentUser/My/$($cert.Thumbprint)" -ErrorAction SilentlyContinue
-    Remove-Item "Cert:/CurrentUser/Root/$($cert.Thumbprint)" -ErrorAction SilentlyContinue
+    Remove-Item "Cert:/LocalMachine/Root/$($cert.Thumbprint)" -ErrorAction SilentlyContinue
 }
 
 $compiler = Get-Command ISCC.exe -ErrorAction SilentlyContinue

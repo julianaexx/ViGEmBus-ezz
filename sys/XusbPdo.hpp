@@ -41,6 +41,14 @@ namespace ViGEm::Bus::Targets
 {
 	constexpr auto XUSB_POOL_TAG = 'XUiV';
 
+	// Microsoft hardware identifiers used by XUSB-compatible controllers.
+	// The Series X|S controller uses the same XUSB report format as the
+	// legacy wired Xbox 360 controller, but its product ID is what allows
+	// host applications to select the correct button artwork.
+	constexpr USHORT XBOX_VENDOR_ID = 0x045E;
+	constexpr USHORT XBOX_360_PRODUCT_ID = 0x028E;
+	constexpr USHORT XBOX_SERIES_PRODUCT_ID = 0x0B12;
+
 	typedef struct _XUSB_INTERRUPT_IN_PACKET
 	{
 		UCHAR Id;
@@ -63,7 +71,9 @@ namespace ViGEm::Bus::Targets
 	class EmulationTargetXUSB : public Core::EmulationTargetPDO
 	{
 	public:
-		EmulationTargetXUSB(ULONG Serial, LONG SessionId, USHORT VendorId = 0x045E, USHORT ProductId = 0x028E);
+		EmulationTargetXUSB(ULONG Serial, LONG SessionId,
+			USHORT VendorId = XBOX_VENDOR_ID,
+			USHORT ProductId = XBOX_SERIES_PRODUCT_ID);
 
 		NTSTATUS PdoPrepareDevice(PWDFDEVICE_INIT DeviceInit,
 		                          PUNICODE_STRING DeviceId,

@@ -1,0 +1,64 @@
+name: Build ViGEmBus
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-x64:
+    runs-on: windows-2019
+    env:
+      DMF_ROOT_PATH: ${{ runner.temp }}\DMF
+
+    steps:
+      - name: Check out source and SDK
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Fetch and patch DMF
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/microsoft/DMF.git "$env:DMF_ROOT_PATH"
+          git -C "$env:DMF_ROOT_PATH" apply "$env:GITHUB_WORKSPACE\patches\dmf.diff"
+
+      - name: Build DMF
+        shell: pwsh
+        run: |
+          msbuild "$env:DMF_ROOT_PATH\Dmf.sln" `
+            /m `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:SignMode=Off `
+            /v:minimal
+
+      - name: Build ViGEmBus
+        shell: pwsh
+        run: |
+          msbuild "$env:GITHUB_WORKSPACE\sys\ViGEmBus.vcxproj" `
+            /t:Rebuild `
+            /m `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:DmfRootPath="$env:DMF_ROOT_PATH" `
+            /p:SignMode=Off `
+            /v:minimal
+
+      - name: Package driver
+        shell: pwsh
+        run: makecab.exe /f "$env:GITHUB_WORKSPACE\ViGEmBus_x64.ddf"
+
+      - name: Upload driver artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ViGEmBus-x64-series-controller
+          path: |
+            bin/x64/ViGEmBus/ViGEmBus.sys
+            bin/x64/ViGEmBus/ViGEmBus.inf
+            ViGEmBus_x64.cab
+          if-no-files-found: error

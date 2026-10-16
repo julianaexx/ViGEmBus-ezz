@@ -50,6 +50,9 @@ using ViGEm::Bus::Core::PDO_IDENTIFICATION_DESCRIPTION;
 using ViGEm::Bus::Core::EmulationTargetPDO;
 using ViGEm::Bus::Targets::EmulationTargetXUSB;
 using ViGEm::Bus::Targets::EmulationTargetDS4;
+using ViGEm::Bus::Targets::XBOX_VENDOR_ID;
+using ViGEm::Bus::Targets::XBOX_360_PRODUCT_ID;
+using ViGEm::Bus::Targets::XBOX_SERIES_PRODUCT_ID;
 
 //
 // Simulates a device plug-in event.
@@ -160,6 +163,22 @@ EXTERN_C NTSTATUS Bus_PlugInDevice(
 		switch (plugIn->TargetType)
 		{
 		case Xbox360Wired:
+			// Older ViGEmClient releases initialize an X360 target with
+			// Microsoft's legacy 045E:028E identity. Keep accepting that
+			// request, but expose the Series X|S identity so host software
+			// selects Series button glyphs. A caller that supplies another
+			// product ID keeps full control over the reported identity.
+			if (plugIn->VendorId == XBOX_VENDOR_ID &&
+				plugIn->ProductId == XBOX_360_PRODUCT_ID)
+			{
+				description.Target = new EmulationTargetXUSB(
+					plugIn->SerialNo,
+					pFileData->SessionId,
+					XBOX_VENDOR_ID,
+					XBOX_SERIES_PRODUCT_ID
+				);
+				break;
+			}
 
 			description.Target = new EmulationTargetXUSB(
 				plugIn->SerialNo,

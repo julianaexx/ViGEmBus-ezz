@@ -20,7 +20,8 @@ The `ViGEmBus` driver and `ViGEmClient` libraries represent the core of the Virt
 
 Emulation of the following USB Gamepads is supported:
 
-- [Microsoft Xbox 360 Controller](https://en.wikipedia.org/wiki/Xbox_360_controller)
+- [Microsoft Xbox Series X|S Controller](https://en.wikipedia.org/wiki/Xbox_Series_X_and_Series_S#Controller)
+- Legacy XUSB clients that request the Xbox 360 identity are exposed as the Xbox Series X|S identity for correct host-side button icons.
 - [Sony DualShock 4 Controller](https://en.wikipedia.org/wiki/DualShock#DualShock_4)
 
 ## Use cases

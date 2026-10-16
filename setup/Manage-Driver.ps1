@@ -1,12 +1,23 @@
-param([ValidateSet('Check', 'Install', 'Uninstall')][string]$Mode = 'Check')
+﻿param(
+    [ValidateSet('Check', 'Install', 'Uninstall', 'Verify')][string]$Mode = 'Check',
+    [string]$ResultPath = (Join-Path $env:TEMP 'ViGEmBus-ezz-result.txt'),
+    [switch]$ShowResult
+)
 $ErrorActionPreference = 'Stop'
 $hardwareId = 'Nefarius\ViGEmBus\Gen1'
 $packageDir = $PSScriptRoot
 $reboot = $false
 $log = Join-Path $env:TEMP 'ViGEmBus-ezz-setup.log'
 Start-Transcript -Path $log -Append | Out-Null
+function Write-Result([string]$Message) {
+    $Message | Set-Content -LiteralPath $ResultPath -Encoding utf8
+    if ($ShowResult) {
+        Add-Type -AssemblyName System.Windows.Forms
+        [System.Windows.Forms.MessageBox]::Show($Message, 'ViGEmBus 安装状态') | Out-Null
+    }
+}
 try {
-    if ($Mode -ne 'Uninstall') {
+    if ($Mode -in @('Check', 'Install')) {
         Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -25,11 +36,23 @@ public static class DriverCodeIntegrity {
             throw 'This modified driver is TEST-SIGNED. Windows test-signing mode must already be enabled. See INSTALL.txt. Setup will not change boot settings.'
         }
     }
-    if ($Mode -eq 'Check') { exit 0 }
+    if ($Mode -eq 'Check') { Write-Result '安装环境检查通过。'; exit 0 }
+
+    . "$packageDir/Driver-Status.ps1"
+    if ($Mode -eq 'Verify') {
+        $status = Get-DriverInstallationStatus -PackageDir $packageDir
+        if ($status.State -eq 'RestartRequired') {
+            Write-Result "需要重启：驱动已写入，但尚未确认正常运行。`r`n请重启后再次检查。`r`n目标版本：$($status.Version)`r`n日志：$log"
+            exit 3010
+        }
+        Write-Result "安装成功，驱动正在运行。`r`n当前版本：$($status.Version)`r`n设备状态：正常（错误码 0）`r`n驱动文件校验：通过`r`n日志：$log"
+        exit 0
+    }
 
     $certificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new("$packageDir/ViGEmBus-Test.cer")
     if ($Mode -eq 'Install') {
         $newStores = @()
+        $driverStaged = $false
         try {
             foreach ($store in @('Root', 'TrustedPublisher')) {
                 if (-not (Test-Path "Cert:/LocalMachine/$store/$($certificate.Thumbprint)")) {
@@ -40,21 +63,23 @@ public static class DriverCodeIntegrity {
             & "$env:windir/System32/pnputil.exe" /add-driver "$packageDir/ViGEmBus.inf" /install
             if ($LASTEXITCODE -notin @(0, 3010)) { throw "Driver staging failed: $LASTEXITCODE" }
             if ($LASTEXITCODE -eq 3010) { $reboot = $true }
+            $driverStaged = $true
             $existing = Get-CimInstance Win32_PnPEntity | Where-Object { $_.HardwareID -contains $hardwareId }
             $verb = if ($existing) { 'update' } else { 'install' }
             & "$packageDir/devcon.exe" $verb "$packageDir/ViGEmBus.inf" $hardwareId
             if ($LASTEXITCODE -notin @(0, 1)) { throw "Device installation failed: $LASTEXITCODE" }
             if ($LASTEXITCODE -eq 1) { $reboot = $true }
-            $devices = @(Get-CimInstance Win32_PnPEntity | Where-Object { $_.HardwareID -contains $hardwareId })
-            if ($devices.Count -eq 0) { throw 'ViGEmBus device was not created.' }
-            foreach ($device in $devices) {
-                if ($device.ConfigManagerErrorCode -eq 14) { $reboot = $true }
-                elseif ($device.ConfigManagerErrorCode -ne 0 -and -not $reboot) {
-                    throw "ViGEmBus device error: $($device.ConfigManagerErrorCode). See Device Manager and $log"
-                }
+            $status = Get-DriverInstallationStatus -PackageDir $packageDir -RebootRequested $reboot
+            $reboot = $status.State -eq 'RestartRequired'
+            if ($reboot) {
+                Write-Result "需要重启：驱动安装已提交，尚未确认新驱动正常运行。`r`n目标版本：$($status.Version)`r`n重启后，从开始菜单打开“ViGEmBus-ezz → 检查安装状态”。`r`n日志：$log"
+            } else {
+                Write-Result "安装成功，驱动正在运行。`r`n当前版本：$($status.Version)`r`n设备状态：正常（错误码 0）`r`n驱动文件校验：通过`r`n日志：$log"
             }
         } catch {
-            foreach ($store in $newStores) { Remove-Item "Cert:/LocalMachine/$store/$($certificate.Thumbprint)" -ErrorAction SilentlyContinue }
+            if (-not $driverStaged) {
+                foreach ($store in $newStores) { Remove-Item "Cert:/LocalMachine/$store/$($certificate.Thumbprint)" -ErrorAction SilentlyContinue }
+            }
             throw
         }
     } else {
@@ -76,9 +101,11 @@ public static class DriverCodeIntegrity {
             Remove-Item "Cert:/LocalMachine/$store/$($certificate.Thumbprint)" -ErrorAction SilentlyContinue
         }
     }
+    if ($Mode -eq 'Uninstall') { Write-Result '驱动卸载完成。' }
     if ($reboot) { exit 3010 }
     exit 0
 } catch {
+    Write-Result "检查或安装失败，未确认驱动正常工作。`r`n原因：$($_.Exception.Message)`r`n日志：$log`r`nWindows 驱动日志：$env:windir\INF\setupapi.dev.log"
     Write-Error $_ -ErrorAction Continue
     exit 1
 } finally {

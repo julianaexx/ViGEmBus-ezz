@@ -28,6 +28,15 @@ Before installing:
    %TEMP%\ViGEmBus-ezz-setup.log
    C:\Windows\INF\setupapi.dev.log
 
+The final page explicitly distinguishes READY, RESTART REQUIRED and FAILED.
+READY requires the correct driver package/version bound to the device, device
+error code 0, a running kernel driver, and a matching installed SYS file hash.
+A pending restart is not reported as a working new driver.
+Open Start > ViGEmBus-ezz > Check installation status (Chinese shortcut name)
+to check again after restarting. The initial result is also saved as a text
+file in the installation folder. A working bus does not by itself verify
+the controller identity or the icons shown by a particular game.
+
 Uninstall through Windows Settings > Apps > Installed apps > ViGEmBus-ezz.
 Uninstallation removes this package's driver and test certificate.
 The official ViGEmBus MSI installation is a separate entry and is not removed.

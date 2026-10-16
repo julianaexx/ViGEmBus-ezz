@@ -5,9 +5,19 @@ on:
     branches:
       - master
   workflow_dispatch:
+    inputs:
+      driver_run_id:
+        description: 'Reuse compiled driver from a successful run of this repository (packaging-only changes)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   build-x64:
+    if: ${{ inputs.driver_run_id == '' }}
     runs-on: windows-2022
 
     steps:
@@ -64,6 +74,7 @@ jobs:
 
   package-x64:
     needs: build-x64
+    if: ${{ !cancelled() && (needs.build-x64.result == 'success' || inputs.driver_run_id != '') }}
     runs-on: windows-2022
     steps:
       - name: Check out installer source
@@ -74,6 +85,12 @@ jobs:
         with:
           name: ViGEmBus-x64-compiled-driver
           path: bin/x64/ViGEmBus
+          run-id: ${{ inputs.driver_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+
+      - name: Check installation status detection
+        shell: pwsh
+        run: ./setup/tests/Driver-Status.Tests.ps1
 
       - name: Install Inno Setup compiler
         shell: pwsh

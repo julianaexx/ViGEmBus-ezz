@@ -6,6 +6,7 @@ New-Item -ItemType Directory -Path $stage -Force | Out-Null
 Copy-Item "$root/bin/x64/ViGEmBus/ViGEmBus.sys" $stage
 Copy-Item "$root/LICENSE" $stage
 Copy-Item "$PSScriptRoot/Manage-Driver.ps1" $stage
+Copy-Item "$PSScriptRoot/Driver-Status.ps1" $stage
 Copy-Item "$PSScriptRoot/INSTALL.txt" $stage
 
 $kits = "${env:ProgramFiles(x86)}/Windows Kits/10"
